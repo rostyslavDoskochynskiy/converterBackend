@@ -2,55 +2,50 @@ let express = require('express');
 let axios = require('axios');
 let router = express.Router();
 
-router.get('/',function (req,res) {
-    res.render('index');
-});
+router.get('/', async function (req, res) {
+    try {
+        let myres = {};
+        let amountRes;
+        let from = req.query.from;
+        let to = req.query.to;
+        let amount = req.query.amount;
 
-router.post('/', function (req, res) {
-    let from = req.body.from;
-    let to = req.body.to;
-    let amount = req.body.amount;
-    axios.get('https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=3').then(function (response) {
-        let data = response.data;
-        // let obj;
-        for (const axio of data) {
-            let fromApi = axio.ccy;
-            let toApi = axio.base_ccy;
-            let buyApi = axio.buy;
-            // let saleApi = axio.sale;
-
-            if (from === fromApi) {
-                return from = fromApi;
-                if (to === toApi) {
-                    to = toApi;
-                     return amount *= buyApi;
-                }
+        let response = await axios.get(
+            'https://api.privatbank.ua/p24api/pubinfo?exchange&json&coursid=11',
+            {
+                headers: {'Content-Type': 'application/json'}
             }
+        );
+        let courses = response.data;
 
-            obj = {
-                from: from,
-                to: to,
-                // amount: amount
-            };
+        let fromCourse = courses.filter((el) => {
+            return el.ccy === from;
+        });
+        fromCourse = fromCourse[0];
 
-            console.log(obj);
+        let toCourse = courses.filter((el) => {
+            return el.ccy === to;
+        });
+        toCourse = toCourse[0];
 
-            // console.log(from);
-            // console.log(to);
-            // amount *= buyApi;
-            // console.log(amount);
-            // return amount;
-        }
-    }).catch(function (err) {
-        console.log(err);
-    });
-    res.send("hello");
+        fromCourse = fromCourse ? fromCourse :{buy:1};
+        toCourse = toCourse ? toCourse :{buy:1};
+
+        amountRes = fromCourse.buy * amount;
+        amountRes = amountRes / toCourse.buy;
+
+        myres = {
+            from: from,
+            to: to,
+            amount: amount,
+            amountRes,
+        };
+        res.json(myres);
+    } catch (e) {
+        console.log(e);
+        res.json(e);
+    }
 });
-
-// { ccy: 'EUR', base_ccy: 'UAH', buy: '31.91672', sale: '31.91672' },
-// { ccy: 'RUR', base_ccy: 'UAH', buy: '0.41899', sale: '0.41899' },
-// { ccy: 'USD', base_ccy: 'UAH', buy: '26.23005', sale: '26.23005' },
-// { ccy: 'BTC', base_ccy: 'USD', buy: '8529.7662', sale: '9427.6364' }
 
 module.exports = router;
 
